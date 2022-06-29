@@ -1,3 +1,5 @@
+package br.com.kafka;
+
 import java.util.Properties;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -11,9 +13,9 @@ import static org.apache.kafka.clients.producer.ProducerConfig.BOOTSTRAP_SERVERS
 import static org.apache.kafka.clients.producer.ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG;
 import static org.apache.kafka.clients.producer.ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG;
 
-public class ProducerWithStickyPartitioner {
+public class ProducerWithCallBack {
 
-    private static final Logger log = LoggerFactory.getLogger(ProducerWithStickyPartitioner.class.getSimpleName());
+    private static final Logger log = LoggerFactory.getLogger(ProducerWithCallBack.class.getSimpleName());
 
     public static void main(String[] args) {
         log.info("Hi Im a Kafka producer");
@@ -27,15 +29,13 @@ public class ProducerWithStickyPartitioner {
         //Create the Producer
         KafkaProducer<String, String>  producer = new KafkaProducer<String, String>(properties);
 
-        //If you send lots of message in a small amoutn of time, kafka is smart enough to, batch this messages
-        //in one batch to make more efficient, and send it to the same partition.
-        //In this case, all the 10 messages are going to the same partition
-        for (int i = 0; i < 10; i++) {
-            //create the record
-            ProducerRecord<String, String> record = new ProducerRecord<>("demo_topic", "Producing with a sticky partitoner " + i);
+        //create the record
+        ProducerRecord<String, String> record = new ProducerRecord<>("demo_topic", "Producing with a callback");
 
-            //send data - asynchronous
-            producer.send(record, (metadata, exception) -> {
+        //send data - asynchronous
+        producer.send(record, new Callback() {
+            @Override
+            public void onCompletion(RecordMetadata metadata, Exception exception) {
                 //This method is called everytime a message is sent OR an Exception is thrown
                 if(exception == null) {
                     String message = new StringBuilder("Received metadata \n")
@@ -45,8 +45,8 @@ public class ProducerWithStickyPartitioner {
                             .append("TimeStamp: ").append(metadata.timestamp()).toString();
                     log.info(message);
                 } else log.error("Error while sending the message to a topic", exception);
-            });
-        }
+            }
+        });
 
         //Flush and close the Producer - asynchronous
         producer.flush();
